@@ -11,7 +11,8 @@ import (
 )
 
 // act as a switch in TxClassifier workflow when we are performing a sandwich attack.
-var SANDWICHWATCHDOG = false
+// 为什么不用全局的 sandwich 作为参数呢？ 这不是要设置两个地方，要是设置不对，岂不是无法启动成功？
+var SANDWICHWATCHDOG = true
 
 // allow atomic treatment of Pancakeswap pending tx
 var UNISWAPBLOCK = false
@@ -30,7 +31,7 @@ var Sellers []Seller
 
 // Core classifier to tag txs in the mempool before they're executed. Only used for PCS tx for now but other filters could be added
 func TxClassifier(tx *types.Transaction, client *ethclient.Client, topSnipe chan *big.Int) {
-	if SANDWICHWATCHDOG == false {
+	if !SANDWICHWATCHDOG {
 		if len(Sellers) == 0 {
 			fmt.Println("loading sellers...")
 			loadSellers(client, context.Background())
@@ -100,6 +101,6 @@ func handleWatchedAddressTx(tx *types.Transaction, client *ethclient.Client) {
 	fmt.Println("Gas : ", tx.Gas()*1000000000)
 	fmt.Println("Value : ", formatEthWeiToEther(tx.Value()))
 	fmt.Println("To : ", tx.To())
-	fmt.Println("Hash : ", tx.Hash(), "\n")
+	fmt.Println("Hash : ", tx.Hash())
 
 }
