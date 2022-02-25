@@ -50,7 +50,7 @@ var BIG_BNB_TRANSFER bool = false
 ///////// SNIPE CONFIG //////////
 
 // activate or not the liquidity sniping
-var Sniping bool = true
+var Sniping bool = false
 var PCS_ADDLIQ bool = Sniping
 
 // address of the Trigger smart contract
@@ -68,7 +68,7 @@ var ML = 200
 
 ///////// SANDWICH CONFIG (Be careful: not profitable!) ////////////
 
-var Sandwicher bool = false
+var Sandwicher bool = true
 
 // allows spectator mode for tx that would have been profitable if sandwich realised successfully
 var MonitorModeOnly bool = false
