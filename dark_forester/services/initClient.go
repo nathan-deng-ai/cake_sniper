@@ -13,7 +13,7 @@ import (
 var (
 	// public bsc endpoint. You can't stream pending tx with those.
 	bsc_testnet = "https://data-seed-prebsc-2-s1.binance.org:8545/"
-	bsc         = "https://bsc-dataseed.binance.org/"
+	bsc         = "wss://ws-nd-059-700-417.p2pify.com/545f7f69a26306710d7bdf13e1dd308b"
 	// geth AWS server
 	geth_http = "http://x.xxx.xxx.xxx:8545"
 	geth_ipc  = "/home/ubuntu/bsc/node/geth.ipc"
@@ -33,7 +33,7 @@ func GetCurrentClient() *ethclient.Client {
 	case "geth_http":
 		clientType = geth_http
 	default:
-		clientType = geth_ipc
+		clientType = bsc
 	}
 
 	client, err := ethclient.Dial(clientType)
