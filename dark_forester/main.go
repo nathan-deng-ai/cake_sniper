@@ -83,7 +83,7 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 
 		activeMarkets := 0
 		for _, specs := range global.SANDWICH_BOOK {
-			if specs.Whitelisted && specs.ManuallyDisabled {
+			if specs.Whitelisted && !specs.ManuallyDisabled {
 				// fmt.Println(specs.Name, market, specs.Liquidity)
 				activeMarkets += 1
 			}
