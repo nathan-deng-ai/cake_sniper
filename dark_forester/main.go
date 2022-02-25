@@ -54,18 +54,18 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	if err != nil {
 		fmt.Println("error while subscribing: ", err)
 	}
-	fmt.Println("\nSubscribed to mempool txs!\n")
+	fmt.Println("\nSubscribed to mempool txs!")
 
-	fmt.Println("\n////////////// BIG TRANSFERS //////////////////\n")
+	fmt.Println("\n////////////// BIG TRANSFERS //////////////////")
 	if global.BIG_BNB_TRANSFER == true {
 		fmt.Println("activated\nthreshold of interest : transfers >", global.BNB[:2], " BNB")
 	} else {
 		fmt.Println("not activated")
 	}
 
-	fmt.Println("\n////////////// ADDRESS MONITORING //////////////////\n")
+	fmt.Println("\n////////////// ADDRESS MONITORING //////////////////")
 	if global.ADDRESS_MONITOR == true {
-		fmt.Println("activated\nthe following addresses are monitored : \n")
+		fmt.Println("activated\nthe following addresses are monitored : ")
 		for addy, addressData := range global.AddressesWatched {
 			fmt.Println("address : ", addy, "name: ", addressData.Name)
 		}
@@ -73,7 +73,7 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 		fmt.Println("not activated")
 	}
 
-	fmt.Println("\n////////////// SANDWICHER //////////////////\n")
+	fmt.Println("\n////////////// SANDWICHER //////////////////")
 	if global.Sandwicher == true {
 		fmt.Println("activated\n\nmax BNB amount authorised for one sandwich : ", global.Sandwicher_maxbound, "WBNB")
 		fmt.Println("minimum profit expected : ", global.Sandwicher_minprofit, "WBNB")
@@ -88,15 +88,15 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 				activeMarkets += 1
 			}
 		}
-		fmt.Println("\nNumber of active Markets: ", activeMarkets, "\n")
+		fmt.Println("\nNumber of active Markets: ", activeMarkets, "")
 
-		fmt.Println("\nManually disabled Markets: \n")
+		fmt.Println("\nManually disabled Markets: ")
 		for market, specs := range global.SANDWICH_BOOK {
 			if specs.ManuallyDisabled == true {
 				fmt.Println(specs.Name, market, specs.Liquidity)
 			}
 		}
-		fmt.Println("\nEnnemies: \n")
+		fmt.Println("\nEnnemies: ")
 		for ennemy, _ := range global.ENNEMIES {
 			fmt.Println(ennemy)
 		}
@@ -105,8 +105,8 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 		fmt.Println("not activated")
 	}
 
-	fmt.Println("\n////////////// LIQUIDITY SNIPING //////////////////\n")
-	if global.Sniping == true {
+	fmt.Println("\n////////////// LIQUIDITY SNIPING //////////////////")
+	if global.Sniping {
 		fmt.Println("activated")
 		name, _ := global.Snipe.Tkn.Name(&bind.CallOpts{})
 		fmt.Println("token targetted: ", global.Snipe.TokenAddress, "(", name, ")")
@@ -150,7 +150,7 @@ func main() {
 	global.InitDF(client)
 
 	// init goroutine Clogg if global.Sniping == true
-	if global.Sniping == true {
+	if global.Sniping {
 		wg.Add(1)
 		go func() {
 			services.Clogg(client, TopSnipe)
