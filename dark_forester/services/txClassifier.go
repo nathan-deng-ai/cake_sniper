@@ -11,7 +11,8 @@ import (
 )
 
 // act as a switch in TxClassifier workflow when we are performing a sandwich attack.
-// 为什么不用全局的 sandwich 作为参数呢？ 这不是要设置两个地方，要是设置不对，岂不是无法启动成功？
+// Alter the behaviour of the sandwicher if another bot tries to fuck ours during the sandwich attack.
+// 这个参数的作用是当有其他的三明治交易被发现的时候，去改变自身三明治交易的内容，这个是一个很重要的功能。
 var SANDWICHWATCHDOG = true
 
 // allow atomic treatment of Pancakeswap pending tx

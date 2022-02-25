@@ -39,6 +39,7 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 		return
 	}
 	Rtkn0, Rbnb0 := getReservesData(client)
+	// 流动性不为零，并且在全局监控的可以接受流动性范围内。
 	if Rbnb0 == nil || Rbnb0.Cmp(global.ACCEPTABLELIQ) == -1 {
 		return
 	}
@@ -177,6 +178,8 @@ func HandleAddLiquidityETH(tx *types.Transaction, client *ethclient.Client, topS
 }
 
 // Core method that determines the kind of uniswap trade the tx is
+// 判断tx 是哪一个方法，如果是监听到的方法，则找相应的函数去处理。
+// 这里只有 swapExactETHFORTokens 这是不够的，其他的方法也需要加入进来。
 func handleUniswapTrade(tx *types.Transaction, client *ethclient.Client, topSnipe chan *big.Int) {
 
 	UNISWAPBLOCK = true
@@ -185,15 +188,15 @@ func handleUniswapTrade(tx *types.Transaction, client *ethclient.Client, topSnip
 	switch txFunctionHash {
 
 	case swapExactETHForTokens:
-		if global.Sandwicher == true {
+		if global.Sandwicher {
 			HandleSwapExactETHForTokens(tx, client)
 		}
 	case addLiquidityETH:
-		if global.PCS_ADDLIQ == true {
+		if global.PCS_ADDLIQ {
 			HandleAddLiquidityETH(tx, client, topSnipe)
 		}
 	case addLiquidity:
-		if global.PCS_ADDLIQ == true {
+		if global.PCS_ADDLIQ {
 			HandleAddLiquidity(tx, client, topSnipe)
 		}
 	}

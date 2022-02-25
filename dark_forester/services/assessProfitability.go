@@ -48,12 +48,15 @@ func getReservesData(client *ethclient.Client) (*big.Int, *big.Int) {
 	return Rtkn0, Rbnb0
 }
 
-// perform the binary search to determine optimal amount of WBNB to engage on the sandwich without breaking victim's slippage
+// perform the binary search to determine optimal amount of WBNB
+// to engage on the sandwich without breaking victim's slippage
 func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int) {
 
 	amountTknImBuying1 := _getAmountOut(amountToTest, Rtkn0, Rbnb0)
 	var Rtkn1 = new(big.Int)
 	var Rbnb1 = new(big.Int)
+
+	//token reserved 和 bnb reserved 的最新数量。
 	Rtkn1.Sub(Rtkn0, amountTknImBuying1)
 	Rbnb1.Add(Rbnb0, amountToTest)
 	amountTknVictimWillBuy1 := _getAmountOut(txValue, Rtkn1, Rbnb1)
@@ -62,8 +65,15 @@ func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.
 	// 1) we don't break victim's slippage with amountToTest
 	if amountTknVictimWillBuy1.Cmp(amountOutMinVictim) == 1 {
 		// 2) engage MAXBOUND on the sandwich if MAXBOUND doesn't break slippage
+		// 这里是找到最大的bound 值。这是设置的值，只要不超过，就不会有问题。
 		if amountToTest.Cmp(global.MAXBOUND) == 0 {
-			BinaryResult = &BinarySearchResult{global.MAXBOUND, amountTknImBuying1, amountTknVictimWillBuy1, Rtkn1, Rbnb1, big.NewInt(0)}
+			BinaryResult = &BinarySearchResult{
+				global.MAXBOUND,
+				amountTknImBuying1,
+				amountTknVictimWillBuy1,
+				Rtkn1, Rbnb1,
+				big.NewInt(0)}
+			// 这里为什么不return BinaryResult 而是直接操作了一个全局变量？
 			return
 		}
 		myMaxBuy := amountToTest.Add(amountToTest, global.BASE_UNIT)
@@ -73,7 +83,9 @@ func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.
 		Rtkn1Test.Sub(Rtkn0, amountTknImBuying2)
 		Rbnb1Test.Add(Rbnb0, myMaxBuy)
 		amountTknVictimWillBuy2 := _getAmountOut(txValue, Rtkn1Test, Rbnb1Test)
-		// 3) if we go 1 step further on the ladder and it breaks the slippage, that means that amountToTest is really the amount of WBNB that we can engage and milk the maximum of profits from the sandwich.
+		// 3) if we go 1 step further on the ladder and it breaks the slippage,
+		// that means that amountToTest is really the amount of WBNB that
+		// we can engage and milk the maximum of profits from the sandwich.
 		if amountTknVictimWillBuy2.Cmp(amountOutMinVictim) == -1 {
 			BinaryResult = &BinarySearchResult{amountToTest, amountTknImBuying1, amountTknVictimWillBuy1, Rtkn1, Rbnb1, big.NewInt(0)}
 		}
@@ -93,13 +105,19 @@ func _testMinbound(Rtkn, Rbnb, txValue, amountOutMinVictim *big.Int) int {
 	return amountTknVictimWillBuy.Cmp(amountOutMinVictim)
 }
 
+// 这里是 binary search 的算法部分。
 func getMyMaxBuyAmount2(Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int, arrayOfInterest []*big.Int) {
 	var wg = sync.WaitGroup{}
-	// test with the minimum value we consent to engage. If we break victim's slippage with our MINBOUND, we don't go further.
+	// test with the minimum value we consent to engage.
+	// If we break victim's slippage with our MINBOUND,
+	// we don't go further.
+	// 这里应该返回一个结构体，将所有数据记录下来，然后增加一个是否可执行的标识位
+	// 现在这种做法，无法做单元测试。
 	if _testMinbound(Rtkn0, Rbnb0, txValue, amountOutMinVictim) == 1 {
 		for _, amountToTest := range arrayOfInterest {
 			wg.Add(1)
 			go func() {
+				// 循环调用 , 测试 amountTotest , 但是他的结果如何返回到下一轮循环中呢？
 				_binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim)
 				wg.Done()
 			}()
@@ -111,11 +129,19 @@ func getMyMaxBuyAmount2(Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int, arra
 	}
 }
 
-func assessProfitability(client *ethclient.Client, tkn_adddress common.Address, txValue, amountOutMinVictim, Rtkn0, Rbnb0 *big.Int) bool {
+// 判断是否有利润
+func assessProfitability(client *ethclient.Client,
+	tkn_adddress common.Address, txValue,
+	amountOutMinVictim, Rtkn0, Rbnb0 *big.Int) bool {
 	var expectedProfit = new(big.Int)
 	arrayOfInterest := global.SANDWICHER_LADDER
 
-	// only purpose of this function is to complete the struct BinaryResult via a binary search performed on the sandwich ladder we initialised in the config file. If we cannot even buy 1 BNB without breaking victim slippage, BinaryResult will be nil
+	// only purpose of this function is to complete the struct BinaryResult
+	// via a binary search performed on the sandwich ladder we initialised
+	// in the config file.
+	// If we cannot even buy 1 BNB without breaking victim slippage,
+	// BinaryResult will be nil
+	// 这里不需要设置一个 1BNB的条件，只要计算出来有利润，就是可以做的。
 	getMyMaxBuyAmount2(Rtkn0, Rbnb0, txValue, amountOutMinVictim, arrayOfInterest)
 
 	if BinaryResult.MaxBNBICanBuy != nil {
