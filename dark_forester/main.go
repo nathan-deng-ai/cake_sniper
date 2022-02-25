@@ -57,14 +57,14 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	fmt.Println("\nSubscribed to mempool txs!")
 
 	fmt.Println("\n////////////// BIG TRANSFERS //////////////////")
-	if global.BIG_BNB_TRANSFER == true {
+	if global.BIG_BNB_TRANSFER {
 		fmt.Println("activated\nthreshold of interest : transfers >", global.BNB[:2], " BNB")
 	} else {
 		fmt.Println("not activated")
 	}
 
 	fmt.Println("\n////////////// ADDRESS MONITORING //////////////////")
-	if global.ADDRESS_MONITOR == true {
+	if global.ADDRESS_MONITOR {
 		fmt.Println("activated\nthe following addresses are monitored : ")
 		for addy, addressData := range global.AddressesWatched {
 			fmt.Println("address : ", addy, "name: ", addressData.Name)
@@ -74,7 +74,7 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	}
 
 	fmt.Println("\n////////////// SANDWICHER //////////////////")
-	if global.Sandwicher == true {
+	if global.Sandwicher {
 		fmt.Println("activated\n\nmax BNB amount authorised for one sandwich : ", global.Sandwicher_maxbound, "WBNB")
 		fmt.Println("minimum profit expected : ", global.Sandwicher_minprofit, "WBNB")
 		fmt.Println("current WBNB balance inside TRIGGER : ", formatEthWeiToEther(global.GetTriggerWBNBBalance()), "WBNB")
@@ -83,7 +83,7 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 
 		activeMarkets := 0
 		for _, specs := range global.SANDWICH_BOOK {
-			if specs.Whitelisted == true && specs.ManuallyDisabled == false {
+			if specs.Whitelisted && specs.ManuallyDisabled {
 				// fmt.Println(specs.Name, market, specs.Liquidity)
 				activeMarkets += 1
 			}
@@ -92,7 +92,7 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 
 		fmt.Println("\nManually disabled Markets: ")
 		for market, specs := range global.SANDWICH_BOOK {
-			if specs.ManuallyDisabled == true {
+			if specs.ManuallyDisabled {
 				fmt.Println(specs.Name, market, specs.Liquidity)
 			}
 		}
