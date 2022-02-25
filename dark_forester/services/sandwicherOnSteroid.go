@@ -226,6 +226,7 @@ func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client) {
 	close(confirmedOutTx)
 	select {
 	case <-SomeoneTryToFuckMe:
+		// 这里把信号接了，就算处理完毕了。
 		fmt.Println("cleaning SomeoneTryToFuckMe channel")
 	default:
 	}

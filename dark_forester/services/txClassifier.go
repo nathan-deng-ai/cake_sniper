@@ -13,7 +13,8 @@ import (
 // act as a switch in TxClassifier workflow when we are performing a sandwich attack.
 // Alter the behaviour of the sandwicher if another bot tries to fuck ours during the sandwich attack.
 // 这个参数的作用是当有其他的三明治交易被发现的时候，去改变自身三明治交易的内容，这个是一个很重要的功能。
-var SANDWICHWATCHDOG = true
+// 下面的逻辑会有bug， 如果设置成true的花，所以只能设置成false 。
+var SANDWICHWATCHDOG = false
 
 // allow atomic treatment of Pancakeswap pending tx
 var UNISWAPBLOCK = false
@@ -31,7 +32,12 @@ var SomeoneTryToFuckMe = make(chan struct{}, 1)
 var Sellers []Seller
 
 // Core classifier to tag txs in the mempool before they're executed. Only used for PCS tx for now but other filters could be added
+// 这是所有的tx 的总入口。
 func TxClassifier(tx *types.Transaction, client *ethclient.Client, topSnipe chan *big.Int) {
+	// 如果没开watchdog 才运行下面的逻辑，这个有点奇怪，
+	// 不是应该开了这个开关，才有这个功能吗？ 怎么变成开了这个开关，就只有这个功能了？
+	// 这个watchdog 难道是独立运行的？ 这应该不止于把？
+	// 这里每一个tx 都检查一遍是否开watchdog 又什么意义吗？ 这应该是全局开关。
 	if !SANDWICHWATCHDOG {
 		if len(Sellers) == 0 {
 			fmt.Println("loading sellers...")
@@ -39,14 +45,20 @@ func TxClassifier(tx *types.Transaction, client *ethclient.Client, topSnipe chan
 		}
 		// fmt.Println("new tx to TxClassifier")
 		if tx.To() != nil {
-			if global.AddressesWatched[getTxSenderAddressQuick(tx, client)].Watched == true {
+			if global.AddressesWatched[getTxSenderAddressQuick(tx, client)].Watched {
 				go handleWatchedAddressTx(tx, client)
 			} else if tx.To().Hex() == global.CAKE_ROUTER_ADDRESS {
-				if UNISWAPBLOCK == false && len(tx.Data()) >= 4 {
+				// 一次只处理一个uniswap消息， 收到uniswap消息之后，就上了一个锁
+				// 这会非常影响处理效率的。
+				// 这里未来要改。
+				fmt.Println("pancake tx", tx.Hash(), "uniswap lock", UNISWAPBLOCK)
+				// 为什么这里处理3条消息之后，就不处理了呢？
+				if !UNISWAPBLOCK && len(tx.Data()) >= 4 {
+					// 判断是否是pancake交易。
 					// pankakeSwap events are managed in their own file uniswapClassifier.go
 					go handleUniswapTrade(tx, client, topSnipe)
 				}
-			} else if tx.Value().Cmp(&global.BigTransfer) == 1 && global.BIG_BNB_TRANSFER == true {
+			} else if tx.Value().Cmp(&global.BigTransfer) == 1 && global.BIG_BNB_TRANSFER {
 				fmt.Printf("\nBIG TRANSFER: %v, Value: %v\n", tx.Hash().Hex(), formatEthWeiToEther(tx.Value()))
 			}
 		}
@@ -55,12 +67,22 @@ func TxClassifier(tx *types.Transaction, client *ethclient.Client, topSnipe chan
 	}
 }
 
-// Alter the behaviour of the sandwicher if another bot tries to fuck ours during the sandwich attack.
+// Alter the behaviour of the sandwicher if another bot tries to fuck ours
+// during the sandwich attack.
 func FrontrunningWatchdog(tx *types.Transaction, client *ethclient.Client) {
 	// is executed only once
-	if FRONTRUNNINGWATCHDOGBLOCK == false && tx.To() != nil {
-		if global.ENNEMIES[*tx.To()] == true {
+	// 这里使用了 一个lock 锁，来确保只运行一次。
+	// 默认是false，非false，就是true，默认回运行。
+	// 第二次是true，非true 第二次就是false， 也就不会运行了。
+	// 为什么只运行一次呢？ 这里的逻辑好奇怪。
+	if !FRONTRUNNINGWATCHDOGBLOCK && tx.To() != nil {
+		if global.ENNEMIES[*tx.To()] {
 			fmt.Printf("\n%v trying to fuck us!", *tx.To())
+			// 而且发到channel中的内容是空，这里只是做了一个信号。
+			// 在处理的地方，有把这个锁设置成false的地方。
+			// 这样在高并发的情况下，能够保证只有一个任务在取消。
+			// 这个逻辑对吗？ 如果真的有大量的并发的时候，就只能取消一个？
+			// 还是说，根本无法在同一个区块并发处理多个sandwich请求？
 			SomeoneTryToFuckMe <- struct{}{}
 			FRONTRUNNINGWATCHDOGBLOCK = true
 		}

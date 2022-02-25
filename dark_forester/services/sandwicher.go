@@ -48,6 +48,9 @@ func sandwiching(tx *types.Transaction, client *ethclient.Client) {
 	select {
 	case <-SomeoneTryToFuckMe:
 		//try to cancel the tx
+		//紧急退出， 取消tx。
+		// 这里对情况做了处理，其他两个地方，并没有对情况做处理。
+		// 同时，他是如何判断应该取消哪一个交易的呢？
 		emmmergencyCancel(nonce, client, gasPriceFront, oldBalanceTrigger, signedFrontrunningTx.Hash(), tx.Hash(), FirstConfirmed)
 
 	case result := <-FirstConfirmed:
@@ -62,6 +65,13 @@ func sandwiching(tx *types.Transaction, client *ethclient.Client) {
 		}
 	}
 
+	// 处理一次之后， watchdog就是false了？ 就不跟踪了？
+	// 锁被设置成了false， 那么下一次就可以运行了。
+
+	// 下一次在入口逻辑中，就进入到了处理uniswap信息的逻辑中了。
+	// 也就是说， 处理uniswap信息和watchdog ，同时只运行一个？
+	//这里是有逻辑问题的。 默认设置 watchdog 为true， 在入口处就会进入watchdog流程。
+	// 然后watchdog 流程，并没有能够把watchdog 设置为false 的地方，直接就进入死循环了。
 	SANDWICHWATCHDOG = false
 	FRONTRUNNINGWATCHDOGBLOCK = false
 	close(FirstConfirmed)

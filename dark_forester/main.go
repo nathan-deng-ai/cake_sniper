@@ -124,35 +124,41 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	chainID, _ := client.NetworkID(context.Background())
 	signer := types.NewEIP155Signer(chainID)
 
-	// for {
-	// select {
-	// // Code block is executed when a new tx hash is piped to the channel
-	// // 消费订阅的pending tx
-	// case transactionHash := <-newTxsChannel:
+	for {
+		select {
+		// Code block is executed when a new tx hash is piped to the channel
+		// 消费订阅的pending tx
+		case transactionHash := <-newTxsChannel:
+			// Get transaction object from hash by querying the client
+			fmt.Println("new pending transaction hash ", transactionHash)
+			tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
+			// If tx is valid and still unconfirmed
+			if is_pending {
+				_, _ = signer.Sender(tx)
+				handleTransaction(tx, client)
+			}
+		}
+	}
+
+	// 不能做如下的改造，下面的改造会导致只接受到几个信息，后面就没有数据了。
+	// 原因不清楚。
+	// for transactionHash := range newTxsChannel {
 	// 	// Get transaction object from hash by querying the client
-	// 	fmt.Println("new pending transaction hash ", transactionHash)
+	// 	// fmt.Println("new pending transaction hash ", transactionHash)
 	// 	tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
 	// 	// If tx is valid and still unconfirmed
 	// 	if is_pending {
+	// 		// 这一步singer 是用来做什么的？
+	// 		// 计算的结果，又没有要。要是查找错误，也应该处理一下错误啊。
 	// 		_, _ = signer.Sender(tx)
+	// 		// 这里没有生成go routing 来处理没一个tx， 为啥？
 	// 		handleTransaction(tx, client)
 	// 	}
 	// }
-	// }
-
-	for transactionHash := range newTxsChannel {
-		// Get transaction object from hash by querying the client
-		fmt.Println("new pending transaction hash ", transactionHash)
-		tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
-		// If tx is valid and still unconfirmed
-		if is_pending {
-			_, _ = signer.Sender(tx)
-			handleTransaction(tx, client)
-		}
-	}
 }
 
 func handleTransaction(tx *types.Transaction, client *ethclient.Client) {
+	//这个函数相当鸡肋，啥也没做啊。最终给了 分类器处理。
 	services.TxClassifier(tx, client, TopSnipe)
 }
 
