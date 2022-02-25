@@ -270,6 +270,7 @@ func _flushAnalyticFile(structToWrite interface{}) {
 }
 
 func _flushNewmarket(newMarket *NewMarketContent) {
+	// 把新发现的市场，写入到 sandwich book to test json 文件中。
 	out, _ := json.MarshalIndent(newMarket, "", "\t")
 	file, err := os.OpenFile("./global/sandwich_book_to_test.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

@@ -71,7 +71,7 @@ var ML = 200
 var Sandwicher bool = true
 
 // allows spectator mode for tx that would have been profitable if sandwich realised successfully
-var MonitorModeOnly bool = false
+var MonitorModeOnly bool = true
 
 // max slippage we allow in % for our sandwich in tx
 var SandwichInMaxSlippage = 0.5
@@ -83,7 +83,7 @@ var SandwichInGasPriceMultiplier = 10
 var Sandwicher_maxbound = 15 //  BNB
 // min number of WBNB we are ok to spend in the sandwich in tx
 var Sandwicher_minbound = 1    //  BNB
-var Sandwicher_baseunit = 0.02 //  BNB
+var Sandwicher_baseunit = 0.02 //  BNB 这里定义了最小的跨度。
 // min profit expected in bnb to be worth launching a sandwich attack
 var Sandwicher_minprofit = 0.015 //  BNB
 // min liquidity of the pool on which we want to perform sandwich
@@ -96,12 +96,16 @@ var Sandwich_margin_amountIn = 0.01 // BNB
 // max gas price we tolerate for a sandwich in tx
 var Sandwich_max_gwei_to_pay = 1000
 
-// sandwich book contains all the authorised markets, which means markets I can ggo in and out without stupid sell taxes that are widespread among meme tokens
+// sandwich book contains all the authorised markets,
+// which means markets I can ggo in and out without stupid sell taxes
+// that are widespread among meme tokens
 var SANDWICH_BOOK = make(map[common.Address]Market)
 var IN_SANDWICH_BOOK = make(map[common.Address]bool)
 var NewMarketAdded = make(map[common.Address]bool)
 
-// The sandwich ladder is a graduation going from MINBOUND to MAXBOUND with a BASE_UNIT interval. I use it to do a binary search to determmine what is the optimal amount of BNB I can use to do the sandwich in tx without breaking the slippage of the victim.
+// The sandwich ladder is a graduation going from MINBOUND to MAXBOUND with a BASE_UNIT interval.
+// I use it to do a binary search to determmine what is the optimal amount of BNB
+// I can use to do the sandwich in tx without breaking the slippage of the victim.
 var SANDWICHER_LADDER []*big.Int
 
 // List of bots that fucked me on almost all sandwich attacks attempts.. The list is defined in ennemmy_book.json
@@ -231,6 +235,7 @@ func _initSandwicher() {
 	STOPLOSSBALANCE = sl
 
 	// create sandwicher amount ladder for the binary search in services/assessProfitability.go
+	// 按照每个单位来设置这个 sandicher ladder， 这得多少数啊。这简直有点无法理解。
 	counter := new(big.Int).Set(MINBOUND)
 	SANDWICHER_LADDER = append(SANDWICHER_LADDER, MINBOUND) // initial value of 1 BNB
 	for counter.Cmp(MAXBOUND) != 1 {

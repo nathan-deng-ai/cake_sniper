@@ -47,6 +47,7 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	newTxsChannel := make(chan common.Hash)
 
 	// Subscribe to receive one time events for new txs
+	// 订阅pending 的tx 。
 	_, err := rpcClient.EthSubscribe(
 		context.Background(), newTxsChannel, "newPendingTransactions", // no additional args
 	)
@@ -82,9 +83,13 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 		fmt.Println("WARNING: be sure TRIGGER WBNB balance is > SANDWICHER MAXBOUND !!")
 
 		activeMarkets := 0
+		// 这里只是计算一下当前active的 市场，并不是过滤的地方。
 		for _, specs := range global.SANDWICH_BOOK {
 			if specs.Whitelisted && !specs.ManuallyDisabled {
 				// fmt.Println(specs.Name, market, specs.Liquidity)
+				// 只有被标记为 白名单和 没有手动禁用， 都算作有效市场。
+				// 这里可以先注视掉， 或者用黑名单模式。或者有方法可以获得白名单列表。
+				// 白名单需要持续的去维护。
 				activeMarkets += 1
 			}
 		}
@@ -119,17 +124,30 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	chainID, _ := client.NetworkID(context.Background())
 	signer := types.NewEIP155Signer(chainID)
 
-	for {
-		select {
-		// Code block is executed when a new tx hash is piped to the channel
-		case transactionHash := <-newTxsChannel:
-			// Get transaction object from hash by querying the client
-			tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
-			// If tx is valid and still unconfirmed
-			if is_pending {
-				_, _ = signer.Sender(tx)
-				handleTransaction(tx, client)
-			}
+	// for {
+	// select {
+	// // Code block is executed when a new tx hash is piped to the channel
+	// // 消费订阅的pending tx
+	// case transactionHash := <-newTxsChannel:
+	// 	// Get transaction object from hash by querying the client
+	// 	fmt.Println("new pending transaction hash ", transactionHash)
+	// 	tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
+	// 	// If tx is valid and still unconfirmed
+	// 	if is_pending {
+	// 		_, _ = signer.Sender(tx)
+	// 		handleTransaction(tx, client)
+	// 	}
+	// }
+	// }
+
+	for transactionHash := range newTxsChannel {
+		// Get transaction object from hash by querying the client
+		fmt.Println("new pending transaction hash ", transactionHash)
+		tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
+		// If tx is valid and still unconfirmed
+		if is_pending {
+			_, _ = signer.Sender(tx)
+			handleTransaction(tx, client)
 		}
 	}
 }

@@ -12,6 +12,7 @@ import (
 )
 
 // Equivalent of _getAmountOut function of the PCS router. Calculates z.
+// 这个z值就是 x * y =k 中的k值吧。我理解。
 func _getAmountOut(myMaxBuy, reserveOut, reserveIn *big.Int) *big.Int {
 
 	var myMaxBuy9975 = new(big.Int)
@@ -52,41 +53,66 @@ func getReservesData(client *ethclient.Client) (*big.Int, *big.Int) {
 // to engage on the sandwich without breaking victim's slippage
 func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int) {
 
+	// 第一笔交易的模拟。测试 amountToTest这个值，是否合理。
+	// 这里的 amountToTest 我理解是我自己的购买金额，
+	// tknTmBuying 是我购买的 token的数量。
 	amountTknImBuying1 := _getAmountOut(amountToTest, Rtkn0, Rbnb0)
 	var Rtkn1 = new(big.Int)
 	var Rbnb1 = new(big.Int)
 
 	//token reserved 和 bnb reserved 的最新数量。
+	// 进行victim 购买的模拟。 第二笔交易的模拟。
 	Rtkn1.Sub(Rtkn0, amountTknImBuying1)
 	Rbnb1.Add(Rbnb0, amountToTest)
 	amountTknVictimWillBuy1 := _getAmountOut(txValue, Rtkn1, Rbnb1)
 
 	// check if this amountToTest is really the best we can have
 	// 1) we don't break victim's slippage with amountToTest
+	// 检查是否触发滑点。
 	if amountTknVictimWillBuy1.Cmp(amountOutMinVictim) == 1 {
+		// 用户可买的金额大于用户最小金额，也就是没有触发滑点的情况。
 		// 2) engage MAXBOUND on the sandwich if MAXBOUND doesn't break slippage
 		// 这里是找到最大的bound 值。这是设置的值，只要不超过，就不会有问题。
+		//如果amountToTest 等于最大值，并且没有触发滑点，就直接使用最大值了。
+		// 但是这个逻辑，什么时候回触发呢？ 需要把所有的值，都检查一遍，
+		// 外层定义了跨度是 0.02 所以是检查了所有的0.02 跨度的值。
+		// 检查到maxbound 的时候，才会触发，这效率也太低了。
+		// 并没有感觉这里在binarysearch， 而是一个全部覆盖的search。
+
 		if amountToTest.Cmp(global.MAXBOUND) == 0 {
+
+			// 这里直接设置，然后return 空，
 			BinaryResult = &BinarySearchResult{
-				global.MAXBOUND,
-				amountTknImBuying1,
-				amountTknVictimWillBuy1,
+				global.MAXBOUND,         //买入值。
+				amountTknImBuying1,      // 买到的token的数量。
+				amountTknVictimWillBuy1, // victim 购买值
 				Rtkn1, Rbnb1,
 				big.NewInt(0)}
 			// 这里为什么不return BinaryResult 而是直接操作了一个全局变量？
 			return
 		}
+
+		// 这里是将amountToTest 加上了BASE_UNIT，也就是加上了0.02bnb
 		myMaxBuy := amountToTest.Add(amountToTest, global.BASE_UNIT)
+
+		// 使用加上0.02 的值，再模拟一遍。
 		amountTknImBuying2 := _getAmountOut(myMaxBuy, Rtkn0, Rbnb0)
 		var Rtkn1Test = new(big.Int)
 		var Rbnb1Test = new(big.Int)
 		Rtkn1Test.Sub(Rtkn0, amountTknImBuying2)
 		Rbnb1Test.Add(Rbnb0, myMaxBuy)
+
+		// victim的实际购买。
 		amountTknVictimWillBuy2 := _getAmountOut(txValue, Rtkn1Test, Rbnb1Test)
 		// 3) if we go 1 step further on the ladder and it breaks the slippage,
 		// that means that amountToTest is really the amount of WBNB that
 		// we can engage and milk the maximum of profits from the sandwich.
+		// 看是否触发了滑点，如果触发了，则返回上一个值，就ok了。
+		// 这个算哪门子的binarySearch？
+
+		// 并且这个值，并不是按照函数返回值的方式组织的，而是去设置一个全局变量的方式的。
 		if amountTknVictimWillBuy2.Cmp(amountOutMinVictim) == -1 {
+			// 这里直接设置，但是不return，
 			BinaryResult = &BinarySearchResult{amountToTest, amountTknImBuying1, amountTknVictimWillBuy1, Rtkn1, Rbnb1, big.NewInt(0)}
 		}
 	}
@@ -113,7 +139,11 @@ func getMyMaxBuyAmount2(Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int, arra
 	// we don't go further.
 	// 这里应该返回一个结构体，将所有数据记录下来，然后增加一个是否可执行的标识位
 	// 现在这种做法，无法做单元测试。
+
+	// 测试最小值是否满足，如果不满足就直接返回空BinanrySearhReault了。
 	if _testMinbound(Rtkn0, Rbnb0, txValue, amountOutMinVictim) == 1 {
+		// 这里是吧所有的 arrayOfInterest 值给测试一遍吗？ 这得多大的成本，
+		// 而且最终的值是多少，是由什么来确定的呢？
 		for _, amountToTest := range arrayOfInterest {
 			wg.Add(1)
 			go func() {

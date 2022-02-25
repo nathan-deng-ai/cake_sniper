@@ -45,15 +45,17 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 	}
 
 	// 2) Assess profitability of the frontrun
+	// 评估是否有利润。这里是关键的算法 。
 	success := assessProfitability(client, SwapData.Token, tx.Value(), SwapData.AmountOutMin, Rtkn0, Rbnb0)
 	// 3) If the frontrun pass the profitability test, init sandwich tx
-	if success == true {
+	if success {
 		// we check if the market has already been tested
-		if global.IN_SANDWICH_BOOK[SwapData.Token] == true {
+		if global.IN_SANDWICH_BOOK[SwapData.Token] {
 			// we check if the test has been successful as we don't want to snipe on a coin that implement stupid seller tax
-			if global.SANDWICH_BOOK[SwapData.Token].Whitelisted == true && global.SANDWICH_BOOK[SwapData.Token].ManuallyDisabled == false {
+			if global.SANDWICH_BOOK[SwapData.Token].Whitelisted &&
+				!global.SANDWICH_BOOK[SwapData.Token].ManuallyDisabled {
 				// reminder: if MonitorModeOnly == true in the config file, we remain spectator only. We identify sandwich without performing them.
-				if global.MonitorModeOnly == false {
+				if !global.MonitorModeOnly {
 
 					// sandwich attack is performed here. It can come with 2 flavor: the function sandwiching defined in sandwicher.go and sandwichingOnSteroid definied in sandwicherOnSteroid.go. In fact, those 2 functions correspond to 2 iteration of the attack i tried.
 					// sandwiching: initialise a frontrunning tx. Then listen until victim's tx is confirmed. If during that timelapse a bot try to spoil the attack, we try to send a cancel tx. If not, we send a backrunning tx once victimm's tx is validated.
@@ -68,8 +70,11 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 			}
 
 		} else {
-			// if we identify a possible sandwich on a unknown market, we want register it and test hability to buy/sell with python scripts.
-			if global.NewMarketAdded[SwapData.Token] == false {
+			// if we identify a possible sandwich on a unknown market,
+			// we want register it and test hability to buy/sell with python scripts.
+			// 如果不在测试列表内，则记录下来， 可以通过这里来找到没关注到的币。
+
+			if !global.NewMarketAdded[SwapData.Token] {
 				fmt.Println("new market to test: ")
 
 				newMarketContent := NewMarketContent{
