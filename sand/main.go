@@ -12,7 +12,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+
+	// "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -56,6 +57,13 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 		fmt.Println("error while subscribing: ", err)
 	}
 	fmt.Println("\nSubscribed to mempool txs!")
+
+	for transactionHash := range newTxsChannel {
+		go handleTransaction(transactionHash, client)
+	}
+}
+
+func pre_run_info(client *ethclient.Client, rpcClient *rpc.Client) {
 
 	fmt.Println("\n////////////// BIG TRANSFERS //////////////////")
 	if global.BIG_BNB_TRANSFER {
@@ -121,45 +129,19 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	} else {
 		fmt.Println("not activated")
 	}
-	chainID, _ := client.NetworkID(context.Background())
-	signer := types.NewEIP155Signer(chainID)
-
-	for {
-		select {
-		// Code block is executed when a new tx hash is piped to the channel
-		// 消费订阅的pending tx
-		case transactionHash := <-newTxsChannel:
-			// Get transaction object from hash by querying the client
-			fmt.Println("new pending transaction hash ", transactionHash)
-			tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
-			// If tx is valid and still unconfirmed
-			if is_pending {
-				_, _ = signer.Sender(tx)
-				handleTransaction(tx, client)
-			}
-		}
-	}
-
-	// 不能做如下的改造，下面的改造会导致只接受到几个信息，后面就没有数据了。
-	// 原因不清楚。
-	// for transactionHash := range newTxsChannel {
-	// 	// Get transaction object from hash by querying the client
-	// 	// fmt.Println("new pending transaction hash ", transactionHash)
-	// 	tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
-	// 	// If tx is valid and still unconfirmed
-	// 	if is_pending {
-	// 		// 这一步singer 是用来做什么的？
-	// 		// 计算的结果，又没有要。要是查找错误，也应该处理一下错误啊。
-	// 		_, _ = signer.Sender(tx)
-	// 		// 这里没有生成go routing 来处理没一个tx， 为啥？
-	// 		handleTransaction(tx, client)
-	// 	}
-	// }
 }
 
-func handleTransaction(tx *types.Transaction, client *ethclient.Client) {
+func handleTransaction(transactionHash common.Hash, client *ethclient.Client) {
 	//这个函数相当鸡肋，啥也没做啊。最终给了 分类器处理。
-	services.TxClassifier(tx, client, TopSnipe)
+	tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
+	// If tx is valid and still unconfirmed
+	// 用这个打印信息来查看当前节点的响应速度。
+	// fmt.Println("new pending transaction hash ", transactionHash, is_pending)
+	if is_pending {
+		// _, _ = signer.Sender(tx)
+		services.TxClassifier(tx, client, TopSnipe)
+	}
+
 }
 
 func main() {
@@ -183,6 +165,7 @@ func main() {
 	}
 
 	// Launch txpool streamer
+	pre_run_info(client, rpcClient)
 	StreamNewTxs(client, rpcClient)
 
 }

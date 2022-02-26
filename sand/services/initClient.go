@@ -13,7 +13,7 @@ import (
 var (
 	// public bsc endpoint. You can't stream pending tx with those.
 	bsc_testnet = "https://data-seed-prebsc-2-s1.binance.org:8545/"
-	bsc         = "wss://ws-nd-059-700-417.p2pify.com/545f7f69a26306710d7bdf13e1dd308b"
+	bsc         = "wss://ws-nd-115-172-058.p2pify.com/7aedcefebedfa28d312fc7a88affcecd"
 	// geth AWS server
 	geth_http = "http://x.xxx.xxx.xxx:8545"
 	geth_ipc  = "/home/ubuntu/bsc/node/geth.ipc"
