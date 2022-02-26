@@ -42,7 +42,7 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 		return
 	}
 	Rtkn0, Rbnb0 := getReservesData(client, SwapData)
-	fmt.Println("swap bnb", "token0", Rtkn0, "bnb", Rbnb0)
+	fmt.Println("swap bnb token0", Rtkn0, "bnb", Rbnb0)
 	// 流动性不为零，并且在全局监控的可以接受流动性范围内。
 	if Rbnb0 == nil || Rbnb0.Cmp(global.ACCEPTABLELIQ) == -1 {
 		return
@@ -54,6 +54,7 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 		client, SwapData.Token, tx.Value(),
 		SwapData.AmountOutMin, Rtkn0, Rbnb0)
 	// 3) If the frontrun pass the profitability test, init sandwich tx
+	fmt.Println("binary search result ", success, BinaryResult)
 	if success {
 		// we check if the market has already been tested
 		if global.IN_SANDWICH_BOOK[SwapData.Token] {

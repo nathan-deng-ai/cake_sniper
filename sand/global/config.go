@@ -87,7 +87,8 @@ var Sandwicher_baseunit = 0.02 //  BNB 这里定义了最小的跨度。
 // min profit expected in bnb to be worth launching a sandwich attack
 var Sandwicher_minprofit = 0.015 //  BNB
 // min liquidity of the pool on which we want to perform sandwich
-var Sandwicher_acceptable_liq = 100 // BNB
+// 默认值100bnb 太大了，把大部分交易对都剔除在外了。
+var Sandwicher_acceptable_liq = 1 // BNB
 // stop everything and panic if we lose cumulated > 2 BNB on the different attacks
 var Sandwicher_stop_loss = 2
 
