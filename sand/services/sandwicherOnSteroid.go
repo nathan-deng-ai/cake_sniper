@@ -194,7 +194,7 @@ func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client) {
 	// logging stuff. We don't really need it.
 	fmt.Println("targetted token : ", SwapData.Token)
 	fmt.Println("name : ", getTokenName(SwapData.Token, client))
-	fmt.Println("pair : ", showPairAddress(), "\n")
+	fmt.Println("pair : ", showPairAddress())
 
 	// then we need to take into account analytic stuff.
 
@@ -230,7 +230,7 @@ func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client) {
 		fmt.Println("cleaning SomeoneTryToFuckMe channel")
 	default:
 	}
-	loadSellers(client, context.Background())
+	LoadSellers(client, context.Background())
 	fmt.Println("sandwichingOnSteroid last line")
 	return
 }

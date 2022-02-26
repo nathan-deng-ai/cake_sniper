@@ -42,8 +42,8 @@ func sandwiching(tx *types.Transaction, client *ethclient.Client) {
 	}
 	fmt.Println("Frontrunning tx hash: ", signedFrontrunningTx.Hash())
 	fmt.Println("Targetted token : ", SwapData.Token)
-	fmt.Println("Name : ", getTokenName(SwapData.Token, client), "\n")
-	fmt.Println("pair : ", showPairAddress(), "\n")
+	fmt.Println("Name : ", getTokenName(SwapData.Token, client))
+	fmt.Println("pair : ", showPairAddress())
 
 	select {
 	case <-SomeoneTryToFuckMe:

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"dark_forester/global"
 	"fmt"
 	"math/big"
@@ -29,7 +28,6 @@ var FRONTRUNNINGWATCHDOGBLOCK = false
 var SomeoneTryToFuckMe = make(chan struct{}, 1)
 
 // only useful for sandwicher
-var Sellers []Seller
 
 // Core classifier to tag txs in the mempool before they're executed. Only used for PCS tx for now but other filters could be added
 // 这是所有的tx 的总入口。
@@ -39,29 +37,31 @@ func TxClassifier(tx *types.Transaction, client *ethclient.Client, topSnipe chan
 	// 这个watchdog 难道是独立运行的？ 这应该不止于把？
 	// 这里每一个tx 都检查一遍是否开watchdog 又什么意义吗？ 这应该是全局开关。
 	if !SANDWICHWATCHDOG {
-		if len(Sellers) == 0 {
-			fmt.Println("loading sellers...")
-			loadSellers(client, context.Background())
-		}
+		//  这个载入seller 的动作， 应该在前面载入，而不是在这里。
+
 		// fmt.Println("new tx to TxClassifier")
-		if tx.To() != nil {
-			if global.AddressesWatched[getTxSenderAddressQuick(tx, client)].Watched {
-				go handleWatchedAddressTx(tx, client)
-			} else if tx.To().Hex() == global.CAKE_ROUTER_ADDRESS {
-				// 一次只处理一个uniswap消息， 收到uniswap消息之后，就上了一个锁
-				// 这会非常影响处理效率的。
-				// 这里未来要改。
-				fmt.Println("pancake tx", tx.Hash(), "uniswap lock", UNISWAPBLOCK)
-				// 为什么这里处理3条消息之后，就不处理了呢？
-				if !UNISWAPBLOCK && len(tx.Data()) >= 4 {
-					// 判断是否是pancake交易。
-					// pankakeSwap events are managed in their own file uniswapClassifier.go
-					go handleUniswapTrade(tx, client, topSnipe)
-				}
-			} else if tx.Value().Cmp(&global.BigTransfer) == 1 && global.BIG_BNB_TRANSFER {
-				fmt.Printf("\nBIG TRANSFER: %v, Value: %v\n", tx.Hash().Hex(), formatEthWeiToEther(tx.Value()))
+
+		if global.AddressesWatched[getTxSenderAddressQuick(tx, client)].Watched {
+			// 如果是在watch list 列表中，就由下面的函数处理。
+			// 关键问题是这里他只要监控到是这些地址，就不再到 pancakeswap的处理列表中了。
+			// 这是哪门子逻辑。这应该并行处理啊。
+			// 下面的几个逻辑，也是几选1，而不是所有同时处理。
+			go handleWatchedAddressTx(tx, client)
+		} else if tx.To().Hex() == global.CAKE_ROUTER_ADDRESS {
+			// 一次只处理一个uniswap消息， 收到uniswap消息之后，就上了一个锁
+			// 这会非常影响处理效率的。
+			// 这里未来要改。
+			fmt.Println("pancake tx", tx.Hash(), "uniswap lock", UNISWAPBLOCK)
+			// 为什么这里处理3条消息之后，就不处理了呢？
+			if !UNISWAPBLOCK && len(tx.Data()) >= 4 {
+				// 判断是否是pancake交易。
+				// pankakeSwap events are managed in their own file uniswapClassifier.go
+				go handleUniswapTrade(tx, client, topSnipe)
 			}
+		} else if tx.Value().Cmp(&global.BigTransfer) == 1 && global.BIG_BNB_TRANSFER {
+			fmt.Printf("\nBIG TRANSFER: %v, Value: %v\n", tx.Hash().Hex(), formatEthWeiToEther(tx.Value()))
 		}
+
 	} else {
 		go FrontrunningWatchdog(tx, client)
 	}
@@ -75,9 +75,9 @@ func FrontrunningWatchdog(tx *types.Transaction, client *ethclient.Client) {
 	// 默认是false，非false，就是true，默认回运行。
 	// 第二次是true，非true 第二次就是false， 也就不会运行了。
 	// 为什么只运行一次呢？ 这里的逻辑好奇怪。
-	if !FRONTRUNNINGWATCHDOGBLOCK && tx.To() != nil {
+	if !FRONTRUNNINGWATCHDOGBLOCK {
 		if global.ENNEMIES[*tx.To()] {
-			fmt.Printf("\n%v trying to fuck us!", *tx.To())
+			fmt.Printf("%v trying to fuck us!", *tx.To())
 			// 而且发到channel中的内容是空，这里只是做了一个信号。
 			// 在处理的地方，有把这个锁设置成false的地方。
 			// 这样在高并发的情况下，能够保证只有一个任务在取消。
@@ -89,7 +89,8 @@ func FrontrunningWatchdog(tx *types.Transaction, client *ethclient.Client) {
 	}
 }
 
-// This version of the function was uniquely used for tests purposes as I was trying to frontrun myself on PCS. Worked like a charm!
+// This version of the function was uniquely used for tests purposes
+// as I was trying to frontrun myself on PCS. Worked like a charm!
 func _handleWatchedAddressTx(tx *types.Transaction, client *ethclient.Client) {
 	sender := getTxSenderAddressQuick(tx, client)
 	fmt.Println("New transaction from ", sender, "(", global.AddressesWatched[sender].Name, ")")
@@ -115,6 +116,7 @@ func _handleWatchedAddressTx(tx *types.Transaction, client *ethclient.Client) {
 }
 
 // display transactions of the address you monitor if ADDRESS_MONITOR == true in the config file
+// 这仅仅是为了显示watch list中的交易， 并没有什么特别的功能。
 func handleWatchedAddressTx(tx *types.Transaction, client *ethclient.Client) {
 
 	sender := getTxSenderAddressQuick(tx, client)

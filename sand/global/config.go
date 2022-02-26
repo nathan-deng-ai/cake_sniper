@@ -302,13 +302,16 @@ func InitDF(client *ethclient.Client) {
 	_initSniper(client)
 
 	// initialize BIG_BNB_TRANSFER
-	if BIG_BNB_TRANSFER == true {
+	if BIG_BNB_TRANSFER {
 		bnb, _ := new(big.Int).SetString(BNB, 10)
 		BigTransfer = *bnb
 	}
 
 	// INITIALISE ADDRESS_MONITOR
-	if ADDRESS_MONITOR == true {
+	// 这里并没有讲这个address list 是做什么用的。
+	// 这里的转换是把address list 整成map 格式，
+	// 这个在初始化json的时候，就是这个格式不就完了么。这么嗨搞一层。
+	if ADDRESS_MONITOR {
 		var AddressList []Address
 		data, err := ioutil.ReadFile("./global/address_list.json")
 		if err != nil {

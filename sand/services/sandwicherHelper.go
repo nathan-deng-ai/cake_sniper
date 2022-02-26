@@ -31,7 +31,9 @@ type Seller struct {
 	PendingNonce uint64
 }
 
-func loadSellers(client *ethclient.Client, ctx context.Context) {
+var Sellers []Seller
+
+func LoadSellers(client *ethclient.Client, ctx context.Context) {
 
 	var guard sync.Mutex
 	var swarm []Seller

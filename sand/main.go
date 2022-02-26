@@ -46,9 +46,6 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 
 	// Go channel to pipe data from client subscription
 	newTxsChannel := make(chan common.Hash)
-
-	// Subscribe to receive one time events for new txs
-	// 订阅pending 的tx 。
 	_, err := rpcClient.EthSubscribe(
 		context.Background(), newTxsChannel, "newPendingTransactions", // no additional args
 	)
@@ -69,7 +66,8 @@ func handleTransaction(transactionHash common.Hash, client *ethclient.Client) {
 	// If tx is valid and still unconfirmed
 	// 用这个打印信息来查看当前节点的响应速度。
 	// fmt.Println("new pending transaction hash ", transactionHash, is_pending)
-	if is_pending {
+	// to = nil 是合约创建的tx，因此要过滤掉。
+	if is_pending && tx.To() != nil {
 		// _, _ = signer.Sender(tx)
 		services.TxClassifier(tx, client, TopSnipe)
 	}
@@ -96,12 +94,16 @@ func pre_run_info(client *ethclient.Client, rpcClient *rpc.Client) {
 	}
 
 	fmt.Println("////////////// SANDWICHER //////////////////")
+
 	if global.Sandwicher {
 		fmt.Println("activated\n\nmax BNB amount authorised for one sandwich : ", global.Sandwicher_maxbound, "WBNB")
 		fmt.Println("minimum profit expected : ", global.Sandwicher_minprofit, "WBNB")
 		fmt.Println("current WBNB balance inside TRIGGER : ", formatEthWeiToEther(global.GetTriggerWBNBBalance()), "WBNB")
 		fmt.Println("TRIGGER balance at which we stop execution : ", formatEthWeiToEther(global.STOPLOSSBALANCE), "WBNB")
 		fmt.Println("WARNING: be sure TRIGGER WBNB balance is > SANDWICHER MAXBOUND !!")
+
+		fmt.Println("loading sellers...")
+		services.LoadSellers(client, context.Background())
 
 		activeMarkets := 0
 		// 这里只是计算一下当前active的 市场，并不是过滤的地方。
