@@ -32,38 +32,20 @@ var SomeoneTryToFuckMe = make(chan struct{}, 1)
 // Core classifier to tag txs in the mempool before they're executed. Only used for PCS tx for now but other filters could be added
 // 这是所有的tx 的总入口。
 func TxClassifier(tx *types.Transaction, client *ethclient.Client, topSnipe chan *big.Int) {
-	// 如果没开watchdog 才运行下面的逻辑，这个有点奇怪，
-	// 不是应该开了这个开关，才有这个功能吗？ 怎么变成开了这个开关，就只有这个功能了？
-	// 这个watchdog 难道是独立运行的？ 这应该不止于把？
-	// 这里每一个tx 都检查一遍是否开watchdog 又什么意义吗？ 这应该是全局开关。
-	if !SANDWICHWATCHDOG {
-		//  这个载入seller 的动作， 应该在前面载入，而不是在这里。
+	// 重构代码，把业务逻辑全部放入到gorouting 函数中处理
 
-		// fmt.Println("new tx to TxClassifier")
+	go handleWatchedAddressTx(tx, client)
+	go handle_bigtransfer(tx, client)
+	go handleUniswapTrade(tx, client, topSnipe)
 
-		if global.AddressesWatched[getTxSenderAddressQuick(tx, client)].Watched {
-			// 如果是在watch list 列表中，就由下面的函数处理。
-			// 关键问题是这里他只要监控到是这些地址，就不再到 pancakeswap的处理列表中了。
-			// 这是哪门子逻辑。这应该并行处理啊。
-			// 下面的几个逻辑，也是几选1，而不是所有同时处理。
-			go handleWatchedAddressTx(tx, client)
-		} else if tx.To().Hex() == global.CAKE_ROUTER_ADDRESS {
-			// 一次只处理一个uniswap消息， 收到uniswap消息之后，就上了一个锁
-			// 这会非常影响处理效率的。
-			// 这里未来要改。
-			fmt.Println("pancake tx", tx.Hash(), "uniswap lock", UNISWAPBLOCK)
-			// 为什么这里处理3条消息之后，就不处理了呢？
-			if !UNISWAPBLOCK && len(tx.Data()) >= 4 {
-				// 判断是否是pancake交易。
-				// pankakeSwap events are managed in their own file uniswapClassifier.go
-				go handleUniswapTrade(tx, client, topSnipe)
-			}
-		} else if tx.Value().Cmp(&global.BigTransfer) == 1 && global.BIG_BNB_TRANSFER {
-			fmt.Printf("\nBIG TRANSFER: %v, Value: %v\n", tx.Hash().Hex(), formatEthWeiToEther(tx.Value()))
-		}
-
-	} else {
+	if SANDWICHWATCHDOG {
 		go FrontrunningWatchdog(tx, client)
+	}
+}
+
+func handle_bigtransfer(tx *types.Transaction, client *ethclient.Client) {
+	if tx.Value().Cmp(&global.BigTransfer) == 1 && global.BIG_BNB_TRANSFER {
+		fmt.Printf("BIG TRANSFER: %v, Value: %v\n", tx.Hash().Hex(), formatEthWeiToEther(tx.Value()))
 	}
 }
 
@@ -118,14 +100,14 @@ func _handleWatchedAddressTx(tx *types.Transaction, client *ethclient.Client) {
 // display transactions of the address you monitor if ADDRESS_MONITOR == true in the config file
 // 这仅仅是为了显示watch list中的交易， 并没有什么特别的功能。
 func handleWatchedAddressTx(tx *types.Transaction, client *ethclient.Client) {
-
-	sender := getTxSenderAddressQuick(tx, client)
-	fmt.Println("New transaction from ", sender, "(", global.AddressesWatched[sender].Name, ")")
-	fmt.Println("Nonce : ", tx.Nonce())
-	fmt.Println("GasPrice : ", formatEthWeiToEther(tx.GasPrice()))
-	fmt.Println("Gas : ", tx.Gas()*1000000000)
-	fmt.Println("Value : ", formatEthWeiToEther(tx.Value()))
-	fmt.Println("To : ", tx.To())
-	fmt.Println("Hash : ", tx.Hash())
-
+	if global.AddressesWatched[getTxSenderAddressQuick(tx, client)].Watched {
+		sender := getTxSenderAddressQuick(tx, client)
+		fmt.Println("New transaction from ", sender, "(", global.AddressesWatched[sender].Name, ")")
+		fmt.Println("Nonce : ", tx.Nonce())
+		fmt.Println("GasPrice : ", formatEthWeiToEther(tx.GasPrice()))
+		fmt.Println("Gas : ", tx.Gas()*1000000000)
+		fmt.Println("Value : ", formatEthWeiToEther(tx.Value()))
+		fmt.Println("To : ", tx.To())
+		fmt.Println("Hash : ", tx.Hash())
+	}
 }

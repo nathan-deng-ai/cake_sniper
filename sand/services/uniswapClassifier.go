@@ -187,28 +187,35 @@ func HandleAddLiquidityETH(tx *types.Transaction, client *ethclient.Client, topS
 // 这里只有 swapExactETHFORTokens 这是不够的，其他的方法也需要加入进来。
 // pancake 交易总入口。 gorouting 并发。
 func handleUniswapTrade(tx *types.Transaction, client *ethclient.Client, topSnipe chan *big.Int) {
-
-	UNISWAPBLOCK = true
-	txFunctionHash := [4]byte{}
-	copy(txFunctionHash[:], tx.Data()[:4])
-	fmt.Println("new uniswap trade", tx.Hash(), "method", txFunctionHash)
-
-	switch txFunctionHash {
-
-	case swapExactETHForTokens:
-		if global.Sandwicher {
-			HandleSwapExactETHForTokens(tx, client)
-		}
-	case addLiquidityETH:
-		if global.PCS_ADDLIQ {
-			HandleAddLiquidityETH(tx, client, topSnipe)
-		}
-	case addLiquidity:
-		if global.PCS_ADDLIQ {
-			HandleAddLiquidity(tx, client, topSnipe)
-		}
+	if tx.To().Hex() == global.CAKE_ROUTER_ADDRESS {
+		fmt.Println("pancake tx", tx.Hash(), "uniswap lock", UNISWAPBLOCK)
+	} else {
+		return
 	}
-	fmt.Println("process done ", tx.Hash(), "set lock to false")
+	if !UNISWAPBLOCK && len(tx.Data()) >= 4 {
 
-	UNISWAPBLOCK = false
+		UNISWAPBLOCK = true
+		txFunctionHash := [4]byte{}
+		copy(txFunctionHash[:], tx.Data()[:4])
+		fmt.Println("new uniswap trade", tx.Hash(), "method", txFunctionHash)
+
+		switch txFunctionHash {
+
+		case swapExactETHForTokens:
+			if global.Sandwicher {
+				HandleSwapExactETHForTokens(tx, client)
+			}
+		case addLiquidityETH:
+			if global.PCS_ADDLIQ {
+				HandleAddLiquidityETH(tx, client, topSnipe)
+			}
+		case addLiquidity:
+			if global.PCS_ADDLIQ {
+				HandleAddLiquidity(tx, client, topSnipe)
+			}
+		}
+		fmt.Println("process done ", tx.Hash(), "set lock to false")
+
+		UNISWAPBLOCK = false
+	}
 }
