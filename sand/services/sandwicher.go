@@ -15,7 +15,10 @@ import (
 
 var START time.Time
 
-func sandwiching(tx *types.Transaction, client *ethclient.Client, SwapData UniswapExactETHToTokenInput) {
+func sandwiching(
+	tx *types.Transaction, client *ethclient.Client,
+	SwapData UniswapExactETHToTokenInput,
+	BinaryResult *BinarySearchResult) {
 	defer _reinitAnalytics()
 	START = time.Now()
 	oldBalanceTrigger := global.GetTriggerWBNBBalance()
@@ -27,7 +30,7 @@ func sandwiching(tx *types.Transaction, client *ethclient.Client, SwapData Unisw
 	if err != nil {
 		fmt.Printf("couldn't fetch pending nonce for DARK_FORESTER_ACCOUNT", err)
 	}
-	signedFrontrunningTx, gasPriceFront := _prepareFrontrun(nonce, tx, client, SwapData)
+	signedFrontrunningTx, gasPriceFront := _prepareFrontrun(nonce, tx, client, SwapData, BinaryResult)
 	if signedFrontrunningTx == nil {
 		return
 	}
@@ -51,7 +54,10 @@ func sandwiching(tx *types.Transaction, client *ethclient.Client, SwapData Unisw
 		//紧急退出， 取消tx。
 		// 这里对情况做了处理，其他两个地方，并没有对情况做处理。
 		// 同时，他是如何判断应该取消哪一个交易的呢？
-		emmmergencyCancel(nonce, client, gasPriceFront, oldBalanceTrigger, signedFrontrunningTx.Hash(), tx.Hash(), FirstConfirmed, SwapData)
+		emmmergencyCancel(
+			nonce, client, gasPriceFront, oldBalanceTrigger,
+			signedFrontrunningTx.Hash(), tx.Hash(),
+			FirstConfirmed, SwapData, BinaryResult)
 
 	case result := <-FirstConfirmed:
 		if result.Status == 0 {
@@ -59,11 +65,14 @@ func sandwiching(tx *types.Transaction, client *ethclient.Client, SwapData Unisw
 			fmt.Println("frontrunning tx reverted")
 			_buildFrontrunAnalytics(tx.Hash(), signedFrontrunningTx.Hash(),
 				global.Nullhash, client, true, true,
-				oldBalanceTrigger, gasPriceFront, SwapData)
+				oldBalanceTrigger, gasPriceFront, SwapData, BinaryResult)
 
 		} else {
 			fmt.Println("frontrunning tx successful. Sending backrunning..")
-			sendBackRunningTx(nonce, gasPriceFront, oldBalanceTrigger, client, signedFrontrunningTx.Hash(), tx.Hash(), SwapData)
+			sendBackRunningTx(
+				nonce, gasPriceFront, oldBalanceTrigger,
+				client, signedFrontrunningTx.Hash(),
+				tx.Hash(), SwapData, BinaryResult)
 		}
 	}
 
@@ -90,7 +99,8 @@ func sandwiching(tx *types.Transaction, client *ethclient.Client, SwapData Unisw
 func emmmergencyCancel(nonce uint64, client *ethclient.Client,
 	gasPriceFront, oldBalanceTrigger *big.Int, frontrunHash,
 	victimHash common.Hash, FirstConfirmed chan *SandwichResult,
-	SwapData UniswapExactETHToTokenInput) {
+	SwapData UniswapExactETHToTokenInput,
+	BinaryResult *BinarySearchResult) {
 
 	fmt.Println("launching emmergency cancel")
 	signedCancelTx := _prepareCancel(nonce, gasPriceFront)
@@ -121,10 +131,13 @@ func emmmergencyCancel(nonce uint64, client *ethclient.Client,
 		fmt.Println("Cancel tx confirmed successfully before frontrunning tx")
 		_buildCancelAnalytics(victimHash, signedCancelTx.Hash(),
 			client, oldBalanceTrigger,
-			signedCancelTx.GasPrice(), SwapData)
+			signedCancelTx.GasPrice(), SwapData, BinaryResult)
 	} else {
 		fmt.Println("Frontrunning tx confirmed before cancel tx... launching backrunning tx")
-		sendBackRunningTx(nonce, gasPriceFront, oldBalanceTrigger, client, victimHash, frontrunHash, SwapData)
+		sendBackRunningTx(
+			nonce, gasPriceFront, oldBalanceTrigger,
+			client, victimHash, frontrunHash,
+			SwapData, BinaryResult)
 	}
 }
 
@@ -132,7 +145,8 @@ func emmmergencyCancel(nonce uint64, client *ethclient.Client,
 func sendBackRunningTx(nonce uint64, gasPriceFront,
 	oldBalanceTrigger *big.Int, client *ethclient.Client,
 	frontrunHash, victimHash common.Hash,
-	SwapData UniswapExactETHToTokenInput) {
+	SwapData UniswapExactETHToTokenInput,
+	BinaryResult *BinarySearchResult) {
 
 	signedBackrunningTx := _prepareBackrun(nonce, gasPriceFront, SwapData)
 	err := client.SendTransaction(context.Background(), signedBackrunningTx)
@@ -150,13 +164,13 @@ func sendBackRunningTx(nonce uint64, gasPriceFront,
 		fmt.Printf("\nbackrunning tx reverted. Need to manually rescue funds:\ntoken name involved : %v\nBEP20 address:%v\n", SharedAnalytic.TokenName, SharedAnalytic.TokenAddr)
 		_buildFrontrunAnalytics(victimHash, frontrunHash, signedBackrunningTx.Hash(),
 			client, false, true, oldBalanceTrigger,
-			signedBackrunningTx.GasPrice(), SwapData)
+			signedBackrunningTx.GasPrice(), SwapData, BinaryResult)
 		log.Fatalln()
 	} else {
 		// backrunning tx succeeded. Calculates realised profits
 		fmt.Println("backrunning tx sucessful")
 		_buildFrontrunAnalytics(victimHash, frontrunHash,
 			signedBackrunningTx.Hash(), client, false, false,
-			oldBalanceTrigger, signedBackrunningTx.GasPrice(), SwapData)
+			oldBalanceTrigger, signedBackrunningTx.GasPrice(), SwapData, BinaryResult)
 	}
 }

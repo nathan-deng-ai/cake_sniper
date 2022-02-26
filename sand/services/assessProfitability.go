@@ -4,7 +4,6 @@ import (
 	"dark_forester/contracts/uniswap"
 	"dark_forester/global"
 	"math/big"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -51,11 +50,13 @@ func getReservesData(client *ethclient.Client, SwapData UniswapExactETHToTokenIn
 
 // perform the binary search to determine optimal amount of WBNB
 // to engage on the sandwich without breaking victim's slippage
-func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int) {
+func _binarySearch(amountToTest, Rtkn0, Rbnb0,
+	txValue, amountOutMinVictim *big.Int) *BinarySearchResult {
 
 	// 第一笔交易的模拟。测试 amountToTest这个值，是否合理。
 	// 这里的 amountToTest 我理解是我自己的购买金额，
 	// tknTmBuying 是我购买的 token的数量。
+
 	amountTknImBuying1 := _getAmountOut(amountToTest, Rtkn0, Rbnb0)
 	var Rtkn1 = new(big.Int)
 	var Rbnb1 = new(big.Int)
@@ -69,6 +70,10 @@ func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.
 	// check if this amountToTest is really the best we can have
 	// 1) we don't break victim's slippage with amountToTest
 	// 检查是否触发滑点。
+
+	// 初始化 这个binaryResult
+	var BinaryResult *BinarySearchResult
+
 	if amountTknVictimWillBuy1.Cmp(amountOutMinVictim) == 1 {
 		// 用户可买的金额大于用户最小金额，也就是没有触发滑点的情况。
 		// 2) engage MAXBOUND on the sandwich if MAXBOUND doesn't break slippage
@@ -89,7 +94,6 @@ func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.
 				Rtkn1, Rbnb1,
 				big.NewInt(0)}
 			// 这里为什么不return BinaryResult 而是直接操作了一个全局变量？
-			return
 		}
 
 		// 这里是将amountToTest 加上了BASE_UNIT，也就是加上了0.02bnb
@@ -113,10 +117,14 @@ func _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.
 		// 并且这个值，并不是按照函数返回值的方式组织的，而是去设置一个全局变量的方式的。
 		if amountTknVictimWillBuy2.Cmp(amountOutMinVictim) == -1 {
 			// 这里直接设置，但是不return，
-			BinaryResult = &BinarySearchResult{amountToTest, amountTknImBuying1, amountTknVictimWillBuy1, Rtkn1, Rbnb1, big.NewInt(0)}
+			BinaryResult = &BinarySearchResult{
+				amountToTest, amountTknImBuying1,
+				amountTknVictimWillBuy1, Rtkn1,
+				Rbnb1, big.NewInt(0)}
+
 		}
 	}
-	return
+	return BinaryResult
 }
 
 // test if we break victim's slippage with MNBOUND WBNB engaged
@@ -132,8 +140,12 @@ func _testMinbound(Rtkn, Rbnb, txValue, amountOutMinVictim *big.Int) int {
 }
 
 // 这里是 binary search 的算法部分。
-func getMyMaxBuyAmount2(Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int, arrayOfInterest []*big.Int) {
-	var wg = sync.WaitGroup{}
+func getMyMaxBuyAmount2(
+	Rtkn0, Rbnb0, txValue,
+	amountOutMinVictim *big.Int,
+	arrayOfInterest []*big.Int) *BinarySearchResult {
+
+	// var wg = sync.WaitGroup{}
 	// test with the minimum value we consent to engage.
 	// If we break victim's slippage with our MINBOUND,
 	// we don't go further.
@@ -141,28 +153,32 @@ func getMyMaxBuyAmount2(Rtkn0, Rbnb0, txValue, amountOutMinVictim *big.Int, arra
 	// 现在这种做法，无法做单元测试。
 
 	// 测试最小值是否满足，如果不满足就直接返回空BinanrySearhReault了。
+
+	var BinaryResult *BinarySearchResult
+
 	if _testMinbound(Rtkn0, Rbnb0, txValue, amountOutMinVictim) == 1 {
 		// 这里是吧所有的 arrayOfInterest 值给测试一遍吗？ 这得多大的成本，
 		// 而且最终的值是多少，是由什么来确定的呢？
 		for _, amountToTest := range arrayOfInterest {
-			wg.Add(1)
-			go func() {
-				// 循环调用 , 测试 amountTotest , 但是他的结果如何返回到下一轮循环中呢？
-				_binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim)
-				wg.Done()
-			}()
-			wg.Wait()
+			// wg.Add(1)
+			// go func() {
+			// 循环调用 , 测试 amountTotest , 但是他的结果如何返回到下一轮循环中呢？
+			BinaryResult = _binarySearch(amountToTest, Rtkn0, Rbnb0, txValue, amountOutMinVictim)
+			// 	wg.Done()
+			// }()
+			// wg.Wait()
 		}
-		return
+		return BinaryResult
 	} else {
 		BinaryResult = &BinarySearchResult{}
 	}
+	return BinaryResult
 }
 
 // 判断是否有利润
 func assessProfitability(client *ethclient.Client,
 	tkn_adddress common.Address, txValue,
-	amountOutMinVictim, Rtkn0, Rbnb0 *big.Int) bool {
+	amountOutMinVictim, Rtkn0, Rbnb0 *big.Int) (bool, *BinarySearchResult) {
 	var expectedProfit = new(big.Int)
 	arrayOfInterest := global.SANDWICHER_LADDER
 
@@ -172,7 +188,13 @@ func assessProfitability(client *ethclient.Client,
 	// If we cannot even buy 1 BNB without breaking victim slippage,
 	// BinaryResult will be nil
 	// 这里不需要设置一个 1BNB的条件，只要计算出来有利润，就是可以做的。
-	getMyMaxBuyAmount2(Rtkn0, Rbnb0, txValue, amountOutMinVictim, arrayOfInterest)
+
+	BinaryResult := getMyMaxBuyAmount2(
+		Rtkn0, Rbnb0, txValue,
+		amountOutMinVictim, arrayOfInterest)
+	if BinaryResult == nil {
+		return false, BinaryResult
+	}
 
 	if BinaryResult.MaxBNBICanBuy != nil {
 		var Rtkn2 = new(big.Int)
@@ -187,12 +209,12 @@ func assessProfitability(client *ethclient.Client,
 
 		if expectedProfit.Cmp(global.MINPROFIT) == 1 {
 			BinaryResult.ExpectedProfits = expectedProfit
-			return true
+			return true, BinaryResult
 		}
 	}
-	return false
+	return false, BinaryResult
 }
 
-func reinitBinaryResult() {
-	BinaryResult = &BinarySearchResult{}
-}
+// func reinitBinaryResult() {
+// 	BinaryResult = &BinarySearchResult{}
+// }

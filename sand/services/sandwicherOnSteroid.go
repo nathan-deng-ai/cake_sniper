@@ -15,7 +15,8 @@ import (
 )
 
 func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client,
-	SwapData UniswapExactETHToTokenInput) {
+	SwapData UniswapExactETHToTokenInput,
+	BinaryResult *BinarySearchResult) {
 	// 三明治兴奋剂？ 啥意思？
 
 	defer _reinitAnalytics()
