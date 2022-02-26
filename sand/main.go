@@ -56,23 +56,36 @@ func StreamNewTxs(client *ethclient.Client, rpcClient *rpc.Client) {
 	if err != nil {
 		fmt.Println("error while subscribing: ", err)
 	}
-	fmt.Println("\nSubscribed to mempool txs!")
+	fmt.Println("Subscribed to mempool txs!")
 
 	for transactionHash := range newTxsChannel {
 		go handleTransaction(transactionHash, client)
 	}
 }
 
+// 这里做通用的检查， 与业务逻辑无关的检查
+func handleTransaction(transactionHash common.Hash, client *ethclient.Client) {
+	tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
+	// If tx is valid and still unconfirmed
+	// 用这个打印信息来查看当前节点的响应速度。
+	// fmt.Println("new pending transaction hash ", transactionHash, is_pending)
+	if is_pending {
+		// _, _ = signer.Sender(tx)
+		services.TxClassifier(tx, client, TopSnipe)
+	}
+
+}
+
 func pre_run_info(client *ethclient.Client, rpcClient *rpc.Client) {
 
-	fmt.Println("\n////////////// BIG TRANSFERS //////////////////")
+	fmt.Println("////////////// BIG TRANSFERS //////////////////")
 	if global.BIG_BNB_TRANSFER {
 		fmt.Println("activated\nthreshold of interest : transfers >", global.BNB[:2], " BNB")
 	} else {
 		fmt.Println("not activated")
 	}
 
-	fmt.Println("\n////////////// ADDRESS MONITORING //////////////////")
+	fmt.Println("////////////// ADDRESS MONITORING //////////////////")
 	if global.ADDRESS_MONITOR {
 		fmt.Println("activated\nthe following addresses are monitored : ")
 		for addy, addressData := range global.AddressesWatched {
@@ -82,7 +95,7 @@ func pre_run_info(client *ethclient.Client, rpcClient *rpc.Client) {
 		fmt.Println("not activated")
 	}
 
-	fmt.Println("\n////////////// SANDWICHER //////////////////")
+	fmt.Println("////////////// SANDWICHER //////////////////")
 	if global.Sandwicher {
 		fmt.Println("activated\n\nmax BNB amount authorised for one sandwich : ", global.Sandwicher_maxbound, "WBNB")
 		fmt.Println("minimum profit expected : ", global.Sandwicher_minprofit, "WBNB")
@@ -101,15 +114,15 @@ func pre_run_info(client *ethclient.Client, rpcClient *rpc.Client) {
 				activeMarkets += 1
 			}
 		}
-		fmt.Println("\nNumber of active Markets: ", activeMarkets, "")
+		fmt.Println("Number of active Markets: ", activeMarkets, "")
 
-		fmt.Println("\nManually disabled Markets: ")
+		fmt.Println("Manually disabled Markets: ")
 		for market, specs := range global.SANDWICH_BOOK {
 			if specs.ManuallyDisabled {
 				fmt.Println(specs.Name, market, specs.Liquidity)
 			}
 		}
-		fmt.Println("\nEnnemies: ")
+		fmt.Println("Ennemies: ")
 		for ennemy, _ := range global.ENNEMIES {
 			fmt.Println(ennemy)
 		}
@@ -118,7 +131,7 @@ func pre_run_info(client *ethclient.Client, rpcClient *rpc.Client) {
 		fmt.Println("not activated")
 	}
 
-	fmt.Println("\n////////////// LIQUIDITY SNIPING //////////////////")
+	fmt.Println("////////////// LIQUIDITY SNIPING //////////////////")
 	if global.Sniping {
 		fmt.Println("activated")
 		name, _ := global.Snipe.Tkn.Name(&bind.CallOpts{})
@@ -129,19 +142,6 @@ func pre_run_info(client *ethclient.Client, rpcClient *rpc.Client) {
 	} else {
 		fmt.Println("not activated")
 	}
-}
-
-func handleTransaction(transactionHash common.Hash, client *ethclient.Client) {
-	//这个函数相当鸡肋，啥也没做啊。最终给了 分类器处理。
-	tx, is_pending, _ := client.TransactionByHash(context.Background(), transactionHash)
-	// If tx is valid and still unconfirmed
-	// 用这个打印信息来查看当前节点的响应速度。
-	// fmt.Println("new pending transaction hash ", transactionHash, is_pending)
-	if is_pending {
-		// _, _ = signer.Sender(tx)
-		services.TxClassifier(tx, client, TopSnipe)
-	}
-
 }
 
 func main() {
