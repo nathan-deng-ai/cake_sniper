@@ -33,13 +33,15 @@ var routerAbi, _ = abi.JSON(strings.NewReader(uniswap.PancakeRouterABI))
 func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client) {
 	defer reinitBinaryResult()
 	// 0) parse the info of the swap so that we can access it easily
-	buildSwapETHData(tx, client)
+	// https://studygolang.com/topics/9772
+	// gorouting 同时操作同一个全局变量，会造成冲突，这也就是为什么最上层有一个锁。
+	SwapData := buildSwapETHData(tx, client)
 
 	// 1) Do security checks. We want the base currency of the trade to be solely WBNB
 	if SwapData.Paired != global.WBNB_ADDRESS {
 		return
 	}
-	Rtkn0, Rbnb0 := getReservesData(client)
+	Rtkn0, Rbnb0 := getReservesData(client, SwapData)
 	// 流动性不为零，并且在全局监控的可以接受流动性范围内。
 	if Rbnb0 == nil || Rbnb0.Cmp(global.ACCEPTABLELIQ) == -1 {
 		return
@@ -62,7 +64,7 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 					// sandwiching: initialise a frontrunning tx. Then listen until victim's tx is confirmed. If during that timelapse a bot try to spoil the attack, we try to send a cancel tx. If not, we send a backrunning tx once victimm's tx is validated.
 					//sandwichingOnSteroid: the problem with the first approach was that EVERY TIME, a counter-bot will try to fuck our sandwich attack. Have a look at the addresses of the global/ennemy_book.json. Those are the bots that countered me each time on bsc. So, the approach with sandwichingOnSteroid is different. We start with a simple frontrunningg tx. Then we speed up / cancel this tx multiple times randomly, which produce a random gas escalation intended to deceive counter-bots. But it still wasn't profitable and other bots were still able to arb me.
 
-					sandwiching(tx, client)
+					sandwiching(tx, client, SwapData)
 					//sandwichingOnSteroid(tx, client)
 
 				} else {

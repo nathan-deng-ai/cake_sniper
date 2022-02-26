@@ -260,8 +260,6 @@ type FrontrunResultStruct struct {
 	RealisedProfits      float64 `json:"realisedProfits"`
 }
 
-var SwapData UniswapExactETHToTokenInput
-
 type UniswapExactETHToTokenInput struct {
 	Token        common.Address
 	Paired       common.Address
@@ -290,18 +288,28 @@ type UniswapExactETHToTokenFinal struct {
 	UniswapExactETHToTokenFinalInput `json:"inputs"`
 }
 
-func buildSwapETHData(tx *types.Transaction, client *ethclient.Client) {
+func buildSwapETHData(tx *types.Transaction, client *ethclient.Client) UniswapExactETHToTokenInput {
+	//这里也是在操作这个全局函数，
+	// 不过这是gorouting 中运行的，操作这个函数，应该没有问题。
+	// 但这样调用，还是让人感觉奇怪。
+
+	//重构，不使用全局变量的方式， 改成函数传递，这样就可以不用锁了。
+	var SwapData UniswapExactETHToTokenInput
 
 	var amountMin = new(big.Int)
 	var deadline = new(big.Int)
 	data := tx.Data()[4:]
 	last20 := data[len(data)-20:]
+
+	// 这么写，就只能针对swapETHfortoken 这一种函数
+	// 这种直接操作的方式，不如使用库来操作了。太容易出错了，而且看不懂。
 	SwapData.Token = common.BytesToAddress(last20)
 	last40 := data[len(data)-52 : len(data)-32]
 	SwapData.Paired = common.BytesToAddress(last40)
 	SwapData.AmountOutMin, _ = amountMin.SetString(common.Bytes2Hex(data[:32]), 16)
 	SwapData.Deadline, _ = deadline.SetString(common.Bytes2Hex(data[96:128]), 16)
 	SwapData.To = common.BytesToAddress(data[64:96])
+	return SwapData
 }
 
 func buildSwapETHFinal(tx *types.Transaction, client *ethclient.Client, swapData *UniswapExactETHToTokenInput, amountExpectedByVictim *big.Int) UniswapExactETHToTokenFinal {

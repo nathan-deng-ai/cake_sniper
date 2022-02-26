@@ -29,7 +29,7 @@ func _getAmountOut(myMaxBuy, reserveOut, reserveIn *big.Int) *big.Int {
 }
 
 // get reserves of a PCS pair an return it
-func getReservesData(client *ethclient.Client) (*big.Int, *big.Int) {
+func getReservesData(client *ethclient.Client, SwapData UniswapExactETHToTokenInput) (*big.Int, *big.Int) {
 	pairAddress, _ := global.FACTORY.GetPair(&bind.CallOpts{}, SwapData.Token, global.WBNB_ADDRESS)
 	PAIR, _ := uniswap.NewIPancakePair(pairAddress, client)
 	reservesData, _ := PAIR.GetReserves(&bind.CallOpts{})

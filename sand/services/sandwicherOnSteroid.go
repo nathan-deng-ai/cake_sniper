@@ -14,7 +14,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client) {
+func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client,
+	SwapData UniswapExactETHToTokenInput) {
+	// 三明治兴奋剂？ 啥意思？
 
 	defer _reinitAnalytics()
 	START = time.Now()
@@ -169,7 +171,9 @@ func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client) {
 		seller := Sellers[i]
 		go func() {
 			time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond) // sleep between 0 and 1 sec
-			_prepareSellerBackrun(client, &seller, sellGasPrice, confirmedOutTx)
+			_prepareSellerBackrun(client, &seller,
+				sellGasPrice, confirmedOutTx,
+				SwapData)
 		}()
 	}
 
@@ -194,7 +198,7 @@ func sandwichingOnSteroid(tx *types.Transaction, client *ethclient.Client) {
 	// logging stuff. We don't really need it.
 	fmt.Println("targetted token : ", SwapData.Token)
 	fmt.Println("name : ", getTokenName(SwapData.Token, client))
-	fmt.Println("pair : ", showPairAddress())
+	fmt.Println("pair : ", showPairAddress(SwapData))
 
 	// then we need to take into account analytic stuff.
 

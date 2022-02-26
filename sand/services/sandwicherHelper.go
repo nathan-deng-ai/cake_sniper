@@ -64,7 +64,7 @@ func LoadSellers(client *ethclient.Client, ctx context.Context) {
 }
 
 // prepare frontrunning tx:
-func _prepareFrontrun(nonce uint64, tx *types.Transaction, client *ethclient.Client) (*types.Transaction, *big.Int) {
+func _prepareFrontrun(nonce uint64, tx *types.Transaction, client *ethclient.Client, SwapData UniswapExactETHToTokenInput) (*types.Transaction, *big.Int) {
 
 	to := global.TRIGGER_ADDRESS // trigger2 on mainnet
 	gasLimit := uint64(700000)
@@ -103,7 +103,7 @@ func _prepareFrontrun(nonce uint64, tx *types.Transaction, client *ethclient.Cli
 }
 
 // prepare backrunning tx:
-func _prepareBackrun(nonce uint64, gasPrice *big.Int) *types.Transaction {
+func _prepareBackrun(nonce uint64, gasPrice *big.Int, SwapData UniswapExactETHToTokenInput) *types.Transaction {
 	to := global.TRIGGER_ADDRESS
 	gasLimit := uint64(700000)
 	value := big.NewInt(0)
@@ -122,7 +122,7 @@ func _prepareBackrun(nonce uint64, gasPrice *big.Int) *types.Transaction {
 	return signedBackrunningTx
 }
 
-func _prepareSellerBackrun(client *ethclient.Client, seller *Seller, sellGasPrice *big.Int, confirmedOutTx chan *SandwichResult) {
+func _prepareSellerBackrun(client *ethclient.Client, seller *Seller, sellGasPrice *big.Int, confirmedOutTx chan *SandwichResult, SwapData UniswapExactETHToTokenInput) {
 
 	sellerNonce := seller.PendingNonce
 	to := global.TRIGGER_ADDRESS
@@ -196,8 +196,11 @@ func _handleSendOnClosedChan() {
 	}
 }
 
-func _buildCancelAnalytics(victimHash, cancelHash common.Hash, client *ethclient.Client, oldBalanceTrigger, gasPriceCancel *big.Int) {
-	_sharedAnalytics(victimHash, client, oldBalanceTrigger)
+func _buildCancelAnalytics(victimHash, cancelHash common.Hash,
+	client *ethclient.Client, oldBalanceTrigger,
+	gasPriceCancel *big.Int,
+	SwapData UniswapExactETHToTokenInput) {
+	_sharedAnalytics(victimHash, client, oldBalanceTrigger, SwapData)
 	gasPrice := formatEthWeiToEther(gasPriceCancel) * 1000000000
 	cancelResult := CancelResultStruct{
 		SharedAnalyticStruct:   SharedAnalytic,
@@ -208,8 +211,11 @@ func _buildCancelAnalytics(victimHash, cancelHash common.Hash, client *ethclient
 	_flushAnalyticFile(reflect.ValueOf(cancelResult).Interface())
 }
 
-func _buildFrontrunAnalytics(victimHash, frontrunHash, backrunHash common.Hash, client *ethclient.Client, revertedFront, revertedBack bool, oldBalanceTrigger, gasPriceFront *big.Int) {
-	_sharedAnalytics(victimHash, client, oldBalanceTrigger)
+func _buildFrontrunAnalytics(victimHash, frontrunHash, backrunHash common.Hash,
+	client *ethclient.Client, revertedFront, revertedBack bool,
+	oldBalanceTrigger, gasPriceFront *big.Int,
+	SwapData UniswapExactETHToTokenInput) {
+	_sharedAnalytics(victimHash, client, oldBalanceTrigger, SwapData)
 	realisedProfits := new(big.Int)
 	newBalanceTrigger := global.GetTriggerWBNBBalance()
 	realisedProfits.Sub(newBalanceTrigger, oldBalanceTrigger)
@@ -236,7 +242,7 @@ func _buildFrontrunAnalytics(victimHash, frontrunHash, backrunHash common.Hash, 
 
 }
 
-func _sharedAnalytics(victimHash common.Hash, client *ethclient.Client, oldBalanceTrigger *big.Int) {
+func _sharedAnalytics(victimHash common.Hash, client *ethclient.Client, oldBalanceTrigger *big.Int, SwapData UniswapExactETHToTokenInput) {
 
 	pairAddress, _ := global.FACTORY.GetPair(&bind.CallOpts{}, SwapData.Token, global.WBNB_ADDRESS)
 	SharedAnalytic.TokenName = getTokenName(SwapData.Token, client)
@@ -288,7 +294,7 @@ func _flushNewmarket(newMarket *NewMarketContent) {
 	fmt.Println(string(out))
 }
 
-func showPairAddress() common.Address {
+func showPairAddress(SwapData UniswapExactETHToTokenInput) common.Address {
 	pairAddress, _ := global.FACTORY.GetPair(&bind.CallOpts{}, SwapData.Token, global.WBNB_ADDRESS)
 	return pairAddress
 }
