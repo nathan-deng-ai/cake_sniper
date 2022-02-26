@@ -1,1 +1,100 @@
 [
+{
+	"address": "0x6e82149a444322c785d317d121056ff5824a7a7f",
+	"name": "Schrödinger’s Cat",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 194.12512947709848,
+	"manuallyDisabled": false
+},
+{
+	"address": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+	"name": "PancakeSwap Token",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 228.41576867264365,
+	"manuallyDisabled": false
+},
+{
+	"address": "0x14e850e54fcd7b8555b9cdf0c1afc4fda2dd16f7",
+	"name": "DELTA",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 602.5112476110149,
+	"manuallyDisabled": false
+},
+{
+	"address": "0x389c13d5be24bed2af35c30f211e042225cb06ff",
+	"name": "SHIBORG INU",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 105.73583975576184,
+	"manuallyDisabled": false
+},
+{
+	"address": "0x55d398326f99059ff775485246999027b3197955",
+	"name": "Tether USD",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 228.41576867264365,
+	"manuallyDisabled": false
+},
+{
+	"address": "0x7953e8035f84ed7d27edc636414b8c195e019c9c",
+	"name": "Schrodinger",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 605.803247611015,
+	"manuallyDisabled": false
+},
+{
+	"address": "0x2ff2d2b0154c453079c5820f0dfb1a7ab90eab55",
+	"name": "CryptoPartners",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 164.84932996232703,
+	"manuallyDisabled": false
+},
+{
+	"address": "0x5e153b97c00b0f6abce6b7601df1a9abae8a334d",
+	"name": "Carbon Neutrality",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 228.41576867264365,
+	"manuallyDisabled": false
+},
+{
+	"address": "0xf0ca100000e47a0dd2087c81ec910b0bde6ad6f5",
+	"name": "Focal Point",
+	"tested": false,
+	"whitelisted": false,
+	"deviation": 0,
+	"totalProfitsRealised": 0,
+	"totalBnbBought": 0,
+	"liquidity": 365.4904385437704,
+	"manuallyDisabled": false
+},

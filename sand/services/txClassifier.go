@@ -35,8 +35,13 @@ func TxClassifier(tx *types.Transaction, client *ethclient.Client, topSnipe chan
 	// 重构代码，把业务逻辑全部放入到gorouting 函数中处理
 
 	go handleWatchedAddressTx(tx, client)
+
+	if tx.To().Hex() == global.CAKE_ROUTER_ADDRESS {
+		// fmt.Println("pancake tx", tx.Hash(), "uniswap lock", UNISWAPBLOCK)
+		go handleUniswapTrade(tx, client, topSnipe)
+	}
+
 	go handle_bigtransfer(tx, client)
-	go handleUniswapTrade(tx, client, topSnipe)
 
 	if SANDWICHWATCHDOG {
 		go FrontrunningWatchdog(tx, client)

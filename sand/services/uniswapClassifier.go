@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -187,17 +188,18 @@ func HandleAddLiquidityETH(tx *types.Transaction, client *ethclient.Client, topS
 // 这里只有 swapExactETHFORTokens 这是不够的，其他的方法也需要加入进来。
 // pancake 交易总入口。 gorouting 并发。
 func handleUniswapTrade(tx *types.Transaction, client *ethclient.Client, topSnipe chan *big.Int) {
-	if tx.To().Hex() == global.CAKE_ROUTER_ADDRESS {
-		fmt.Println("pancake tx", tx.Hash(), "uniswap lock", UNISWAPBLOCK)
-	} else {
-		return
-	}
-	if !UNISWAPBLOCK && len(tx.Data()) >= 4 {
 
-		UNISWAPBLOCK = true
+	if len(tx.Data()) >= 4 {
+
+		// UNISWAPBLOCK = true
 		txFunctionHash := [4]byte{}
 		copy(txFunctionHash[:], tx.Data()[:4])
-		fmt.Println("new uniswap trade", tx.Hash(), "method", txFunctionHash)
+
+		// txFunctionHash := tx.Data()[:4]
+		// 不可以这么写，原因是， 赋值得到的是 []byte{}  类型，
+		// 但是比较的是 [4]byte{} 类型， 这是不一样的。
+		fmt.Println("new uniswap trade", tx.Hash(),
+			"method", hex.EncodeToString(tx.Data()[:4]))
 
 		switch txFunctionHash {
 
@@ -214,8 +216,8 @@ func handleUniswapTrade(tx *types.Transaction, client *ethclient.Client, topSnip
 				HandleAddLiquidity(tx, client, topSnipe)
 			}
 		}
-		fmt.Println("process done ", tx.Hash(), "set lock to false")
+		// fmt.Println("process done ", tx.Hash(), "set lock to false")
 
-		UNISWAPBLOCK = false
+		// UNISWAPBLOCK = false
 	}
 }
