@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -35,6 +34,7 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 	// 0) parse the info of the swap so that we can access it easily
 	// https://studygolang.com/topics/9772
 	// gorouting 同时操作同一个全局变量，会造成冲突，这也就是为什么最上层有一个锁。
+	// 这里把他全部改掉。
 	SwapData := buildSwapETHData(tx, client)
 
 	// 1) Do security checks. We want the base currency of the trade to be solely WBNB
@@ -42,6 +42,7 @@ func HandleSwapExactETHForTokens(tx *types.Transaction, client *ethclient.Client
 		return
 	}
 	Rtkn0, Rbnb0 := getReservesData(client, SwapData)
+	fmt.Println("swap bnb", "token0", Rtkn0, "bnb", Rbnb0)
 	// 流动性不为零，并且在全局监控的可以接受流动性范围内。
 	if Rbnb0 == nil || Rbnb0.Cmp(global.ACCEPTABLELIQ) == -1 {
 		return
@@ -200,8 +201,8 @@ func handleUniswapTrade(tx *types.Transaction, client *ethclient.Client, topSnip
 		// txFunctionHash := tx.Data()[:4]
 		// 不可以这么写，原因是， 赋值得到的是 []byte{}  类型，
 		// 但是比较的是 [4]byte{} 类型， 这是不一样的。
-		fmt.Println("new uniswap trade", tx.Hash(),
-			"method", hex.EncodeToString(tx.Data()[:4]))
+		// fmt.Println("new uniswap trade", tx.Hash(),
+		// 	"method", hex.EncodeToString(tx.Data()[:4]))
 
 		switch txFunctionHash {
 
